@@ -1,0 +1,20 @@
+---
+# Repair playbook, this is not part of the normal day 1 operations
+# Run this only if a worker/storage node joined the cluster before node_role was set
+# correctly in its group_vars, so its label/taint never matched kubeadm self-registration
+# at join time. Safe to re-run (--overwrite).
+- name: Ensure node role labels and taints match node_role
+  hosts: workers:storage
+  become: true
+  tasks:
+    - name: Ensure node label matches node_role
+      ansible.builtin.command: >
+        kubectl --kubeconfig=/etc/kubernetes/admin.conf
+        label node {{ inventory_hostname }} role={{ node_role }} --overwrite
+      delegate_to: k8s-control-plane
+
+    - name: Ensure node taint matches node_role
+      ansible.builtin.command: >
+        kubectl --kubeconfig=/etc/kubernetes/admin.conf
+        taint node {{ inventory_hostname }} role={{ node_role }}:NoSchedule --overwrite
+      delegate_to: k8s-control-plane

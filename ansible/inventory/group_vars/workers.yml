@@ -1,0 +1,4 @@
+---
+# Custom way to manage k8s taints, labels, nodeAffinity/nodeSelector so
+# that only storage related pods go on this type of node
+node_role: app
