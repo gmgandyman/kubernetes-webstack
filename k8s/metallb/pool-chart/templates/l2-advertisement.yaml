@@ -1,0 +1,9 @@
+# L2 (ARP) mode - no BGP peering available on this network, see docs/ADR/01-load-balancer.md
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - default

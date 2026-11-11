@@ -1,0 +1,4 @@
+# Set via --set addressPoolCIDR="$METALLB_ADDRESS_POOL_CIDR" at install time - see
+# k8s/metallb/README.md. Left empty here so a forgotten --set fails loudly instead of
+# silently applying an empty pool.
+addressPoolCIDR: ""

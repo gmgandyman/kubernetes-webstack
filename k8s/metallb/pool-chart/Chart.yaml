@@ -1,0 +1,8 @@
+apiVersion: v2
+name: metallb-pool
+description: >
+  IPAddressPool/L2Advertisement custom resources for this cluster's MetalLB install. Kept as its own
+  chart instead of baking an address into the upstream metallb/metallb chart, since the
+  pool is environment-specific (comes from METALLB_ADDRESS_POOL_CIDR in toolbox/.env).
+type: application
+version: 0.1.0

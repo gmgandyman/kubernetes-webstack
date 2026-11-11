@@ -1,0 +1,8 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default
+  namespace: metallb-system
+spec:
+  addresses:
+    - {{ required "addressPoolCIDR is not set - pass --set addressPoolCIDR=\"$METALLB_ADDRESS_POOL_CIDR\"" .Values.addressPoolCIDR | quote }}

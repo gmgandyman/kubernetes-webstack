@@ -1,0 +1,30 @@
+---
+# Runs on the toolbox itself (the ansible control node here, not a cluster node) - it
+# already has helm/kubectl on its PATH and KUBECONFIG=/work/.kube/config set, which
+# fetch-kubeconfig.yml just populated.
+- name: Install MetalLB
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Add the metallb helm repo
+      ansible.builtin.command: helm repo add metallb https://metallb.github.io/metallb --force-update
+
+    - name: Update helm repos
+      ansible.builtin.command: helm repo update
+
+    # Notice the --wait in this. Without it, this command will return before the webhook is ready to respond
+    #   and the next task will fail with a "server-side apply failed" error
+    - name: Install/upgrade the metallb chart
+      ansible.builtin.command: >
+        helm upgrade --install metallb metallb/metallb
+        --version {{ lookup('env', 'METALLB_CHART_VERSION') }}
+        --namespace metallb-system
+        --create-namespace
+        --wait
+        -f /work/k8s/metallb/values.yaml
+
+    - name: Install/upgrade the address pool chart
+      ansible.builtin.command: >
+        helm upgrade --install metallb-pool /work/k8s/metallb/pool-chart
+        --namespace metallb-system
+        --set addressPoolCIDR={{ lookup('env', 'METALLB_ADDRESS_POOL_CIDR') }}

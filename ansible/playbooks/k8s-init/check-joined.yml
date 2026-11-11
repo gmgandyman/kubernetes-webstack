@@ -1,0 +1,11 @@
+---
+# /etc/kubernetes/kubelet.conf is only created after a host has been joined to a control plane
+# If that file exists, we want to indicate that the worker or storage node will be skipped in the join phase
+- name: Check which worker/storage nodes already joined
+  hosts: workers:storage
+  become: true
+  tasks:
+    - name: Check for existing kubelet.conf
+      ansible.builtin.stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf

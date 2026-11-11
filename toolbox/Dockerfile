@@ -76,5 +76,16 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opent
 # Remove the installer:
     && rm -f install-opentofu.sh
 
+# Helm - k8s package manager, runs against the cluster from here, same as kubectl.
+# Community-maintained apt repo per https://helm.sh/docs/intro/install/#from-apt-debianubuntu
+RUN curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey \
+      | gpg --dearmor -o /etc/apt/keyrings/helm.asc && \
+    chmod 0644 /etc/apt/keyrings/helm.asc && \
+    printf 'Types: deb\nURIs: https://packages.buildkite.com/helm-linux/helm-debian/any/\nSuites: any\nComponents: main\nSigned-By: /etc/apt/keyrings/helm.asc\n' \
+      | tee /etc/apt/sources.list.d/helm-stable-debian.sources && \
+    apt-get update && \
+    apt-get install --yes --no-install-recommends helm && \
+    rm -rf /var/lib/apt/lists/*
+
 # Boot to a terminal if no command is given
 CMD ["bash"]

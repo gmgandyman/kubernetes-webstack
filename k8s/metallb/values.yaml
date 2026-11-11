@@ -1,0 +1,31 @@
+# Helm overrides for the metallb/metallb chart
+#
+# Every node in this cluster carries a NoSchedule taint:
+#   - control plane: the standard kubeadm node-role.kubernetes.io/control-plane taint
+#   - worker:        role=app:NoSchedule        (ansible/inventory/group_vars/workers.yml)
+#   - storage:       role=db:NoSchedule         (ansible/inventory/group_vars/storage.yml)
+#
+# Speaker should not run on storage nodes, as they run databases, not web apps. They tolerate role=app:NoSchedule
+#   and tolerateMaster (default, not here), so they can be on the Control Plane or Worker nodes. We can also use
+#   externalTrafficPolicy: true for our Gateway to prevent control plane from ever winning an election to respond
+#   to traffic too.
+# Controller can run everywhere. It doesn't change traffic, it just manages the IPs. However, it does not tolerate
+#   the control plane taint, so let it run on storage nodes too.
+
+speaker:
+  tolerations:
+    - key: role
+      operator: Equal
+      value: app
+      effect: NoSchedule
+
+controller:
+  tolerations:
+    - key: role
+      operator: Equal
+      value: app
+      effect: NoSchedule
+    - key: role
+      operator: Equal
+      value: db
+      effect: NoSchedule

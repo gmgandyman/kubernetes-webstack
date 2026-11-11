@@ -73,6 +73,5 @@ It generates the configuration files, stores the token, copies the token to each
 variable, and then pulls down the config file to power the user's kubectl calls from the toolbox. 
 
 ## TODO
-### MetalLB across all nodes
 ### Gateway + HTTPRoute
 ### Nginx web server
