@@ -18,12 +18,20 @@
           --kubeconfig=/etc/kubernetes/admin.conf
       when: kubeadm_init.changed
 
-    # Step 1: create a unified list of all worker and storage nodes
-    # Step 2: jinja reject will yank out any entry where hostvars[host].kubelet_conf.stat.exists = true
-    # Step 3: Force a Jinja resulting lazy generator into an actual list object, because we need that
+    # reject/select take a test name, and extract is a filter, not a test - so build the
+    # list by looping instead. check-joined.yml registers kubelet_conf on every
+    # worker/storage host, so the lookup is always defined here.
+    # Seeded empty first, otherwise an all-joined cluster skips every iteration and
+    # leaves the fact undefined for the length check below.
+    - name: Start with no worker/storage hosts needing a join
+      ansible.builtin.set_fact:
+        unjoined_hosts: []
+
     - name: Build list of worker/storage hosts that need joining to control plane
       ansible.builtin.set_fact:
-        unjoined_hosts: "{{ (groups['workers'] + groups['storage']) | reject('extract', hostvars, ['kubelet_conf', 'stat', 'exists']) | list }}"
+        unjoined_hosts: "{{ unjoined_hosts + [item] }}"
+      loop: "{{ groups['workers'] + groups['storage'] }}"
+      when: not hostvars[item].kubelet_conf.stat.exists
 
     # The when statement here only runs this if unjoined_hosts from above has one or more hosts
     - name: Generate kubeadm join command

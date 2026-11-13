@@ -6,6 +6,6 @@ cd /work
 packer init packer/
 
 echo "Building debian image..."
-packer build -force -only='debian-custom.qemu.debian_bookworm' packer/
+packer build -force -only='debian-custom.qemu.debian_trixie' packer/
 
 echo "Done."

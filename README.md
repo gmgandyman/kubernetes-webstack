@@ -30,7 +30,8 @@ vm
 3. ```cd /work/ansible```
 4. ```ansible-playbook playbooks/k8s-init/main.yml```
 6. ```kubectl get nodes -o wide``` should show your control-plane and 2 worker nodes
-
+7. ```curl -sv http://{IP_FROM_YOUR_METALLB_POOL}``` will return a 404 because there's nothing
+  on the other side of the gateway, but that's an answer on HTTP
 ## Kubernetes Configuration
 - CRI: containerd
 - CNI: flannel

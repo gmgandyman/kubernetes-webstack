@@ -46,6 +46,9 @@ helm upgrade --install metallb-pool k8s/metallb/pool-chart \
 ```bash
 kubectl get pods -n metallb-system -o wide   # speaker should be Running on all 3 nodes
 kubectl get ipaddresspool,l2advertisement -n metallb-system # metalLB registers these as custom kube resources
+# This will spit out the pod information as a YAML file, grep for the line with addresses, and return the next 3 lines
+# after as well
+kubectl get ipaddresspool -n metallb-system -o yaml | grep -A3 addresses 
 ```
 
 A `Service` of `type: LoadBalancer` should then get an `EXTERNAL-IP` from

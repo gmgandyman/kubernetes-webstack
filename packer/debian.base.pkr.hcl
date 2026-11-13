@@ -3,8 +3,8 @@
 # stays close to the real VM. The output of this build is the actual template disk -
 # toolbox/scripts/flatten-images.sh + infra/proxmox/vm-template.tf's
 # proxmox_virtual_environment_file resource upload it as-is.
-source "qemu" "debian_bookworm" {
-    iso_url = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
+source "qemu" "debian_trixie" {
+    iso_url = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2"
 
     # "latest" is a rolling pointer, so there's no stable checksum to pin against
     iso_checksum = "none"
@@ -44,7 +44,7 @@ locals {
 build {
     name = "debian-custom"
     sources = [
-        "source.qemu.debian_bookworm"
+        "source.qemu.debian_trixie"
     ]
 
     // Cloud-init's later stages (network/hostname finalization) can still be running
@@ -78,7 +78,10 @@ build {
     provisioner "ansible" {
         playbook_file   = "${abspath(path.root)}/ansible/playbook.yml"
         extra_arguments = [
-            "-e", "kubernetes_version=${var.kubernetes_version}"
+            "-e", "kubernetes_version=${var.kubernetes_version}",
+            "-e", "containerd_version=${var.containerd_version}",
+            "-e", "runc_version=${var.runc_version}",
+            "-e", "cni_plugins_version=${var.cni_plugins_version}"
         ]
     }
 

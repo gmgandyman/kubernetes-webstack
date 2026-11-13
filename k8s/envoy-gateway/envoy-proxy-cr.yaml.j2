@@ -1,0 +1,19 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoy-proxy-config
+  namespace: "{{ lookup('env', 'ENVOY_GATEWAY_NAMESPACE') }}"
+spec:
+  provider:
+    # Required by the CRD - enum is Kubernetes or Host, and it has to agree with the
+    # kubernetes block below
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          tolerations:
+            - key: role
+              value: app
+              effect: NoSchedule
+      envoyService:
+        externalTrafficPolicy: Local

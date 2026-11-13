@@ -1,24 +1,98 @@
 ---
-# We aren't using the docker version, just Debian's
-- name: Install containerd
-  apt:
-    name: containerd
-    state: present
+# Debian only covers ContainerD v1.x, which will not work for the Gateway API version we need
+# Checksum supports pulling from a URL, so do that
+- name: Download containerd {{ containerd_version }}
+  ansible.builtin.get_url:
+    url: https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz
+    checksum: sha256:https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz.sha256sum
+    dest: /tmp/containerd.tar.gz
+    mode: '0644'
+
+# Step 1: tarball paths are bin/containerd, bin/ctr, ... so /usr/local gives us the
+# /usr/local/bin/containerd that upstream's systemd unit expects
+- name: Install containerd binaries
+  ansible.builtin.unarchive:
+    src: /tmp/containerd.tar.gz
+    remote_src: true
+    dest: /usr/local
+  notify: restart containerd
+
+- name: Remove containerd tarball
+  ansible.builtin.file:
+    path: /tmp/containerd.tar.gz
+    state: absent
+
+# Since we didn't install with apt, we need a unit file for systemd to work
+# /usr/local/lib/systemd/system is where the docs put it
+- name: Create /usr/local/lib/systemd/system if not present
+  ansible.builtin.file:
+    path: /usr/local/lib/systemd/system
+    state: directory
+    mode: '0755'
+
+- name: Install containerd systemd unit
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/containerd/containerd/v{{ containerd_version }}/containerd.service
+    dest: /usr/local/lib/systemd/system/containerd.service
+    mode: '0644'
+  notify: restart containerd
+
+# Step 2: ontainerd 2.x wants runc >= 1.2
+- name: Install runc {{ runc_version }}
+  ansible.builtin.get_url:
+    url: https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.amd64
+    checksum: sha256:https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.sha256sum
+    dest: /usr/local/sbin/runc
+    mode: '0755'
+  notify: restart containerd
+
+# Step 3: We have to grab CNI binaries as well
+- name: Create /opt/cni/bin if not present
+  ansible.builtin.file:
+    path: /opt/cni/bin
+    state: directory
+    mode: '0755'
+
+- name: Download CNI plugins {{ cni_plugins_version }}
+  ansible.builtin.get_url:
+    url: https://github.com/containernetworking/plugins/releases/download/v{{ cni_plugins_version }}/cni-plugins-linux-amd64-v{{ cni_plugins_version }}.tgz
+    checksum: sha256:https://github.com/containernetworking/plugins/releases/download/v{{ cni_plugins_version }}/cni-plugins-linux-amd64-v{{ cni_plugins_version }}.tgz.sha256
+    dest: /tmp/cni-plugins.tgz
+    mode: '0644'
+
+- name: Install CNI plugins
+  ansible.builtin.unarchive:
+    src: /tmp/cni-plugins.tgz
+    remote_src: true
+    dest: /opt/cni/bin
+
+- name: Remove CNI plugins tarball
+  ansible.builtin.file:
+    path: /tmp/cni-plugins.tgz
+    state: absent
+
+- name: Create /etc/containerd if not present
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
 
 - name: Generate default containerd config
-  command: containerd config default
+  ansible.builtin.command: /usr/local/bin/containerd config default
   register: containerd_default_config
   changed_when: false
 
 # Kubernetes docs mandate that if systemd is installed, we must use it's cgroup
 - name: Write containerd config with systemd cgroup driver
-  copy:
+  ansible.builtin.copy:
     dest: /etc/containerd/config.toml
     content: "{{ containerd_default_config.stdout | regex_replace('SystemdCgroup = false', 'SystemdCgroup = true') }}"
+    mode: '0644'
   notify: restart containerd
 
 - name: Ensure containerd is enabled and running
-  systemd:
+  ansible.builtin.systemd_service:
     name: containerd
     enabled: true
     state: started
+    daemon_reload: true

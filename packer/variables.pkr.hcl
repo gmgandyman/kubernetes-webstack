@@ -24,3 +24,20 @@ variable "kubernetes_version" {
     type    = string
     default = env("KUBERNETES_VERSION")
 }
+
+# Full x.y.z - these are upstream release tags, not apt versions (see
+# packer/ansible/roles/setup-linux-for-k8s/tasks/setup-containerd.yml)
+variable "containerd_version" {
+    type    = string
+    default = env("CONTAINERD_VERSION")
+}
+
+variable "runc_version" {
+    type    = string
+    default = env("RUNC_VERSION")
+}
+
+variable "cni_plugins_version" {
+    type    = string
+    default = env("CNI_PLUGINS_VERSION")
+}

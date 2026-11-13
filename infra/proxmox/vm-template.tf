@@ -1,5 +1,5 @@
 locals {
-  debian_custom_image_path = "${path.module}/../../packer/output/debian/debian_bookworm.qcow2"
+  debian_custom_image_path = "${path.module}/../../packer/output/debian/debian_trixie.qcow2"
 }
 
 # Our own packer-built image, not the vanilla upstream cloud image - this is what gets
@@ -17,7 +17,7 @@ resource "proxmox_virtual_environment_file" "debian_custom_image" {
 
   source_file {
     path      = local.debian_custom_image_path
-    file_name = "k8s-debian-12-custom.qcow2"
+    file_name = "k8s-debian-13-custom.qcow2"
     checksum  = filesha256(local.debian_custom_image_path)
   }
 }

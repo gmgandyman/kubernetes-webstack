@@ -1,5 +1,5 @@
 variable "template_name" {
-  default = "k8n-debian-12-cloudinit-template"
+  default = "k8n-debian-13-cloudinit-template"
 }
 
 variable "template_vm_id" {

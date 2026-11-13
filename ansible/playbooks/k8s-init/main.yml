@@ -8,3 +8,8 @@
   ansible.builtin.import_playbook: install-metallb.yml
   tags:
     - metallb
+
+- name: Installing Gateway API tasks
+  ansible.builtin.import_playbook: install-envoy.yml
+  tags:
+    - gateway

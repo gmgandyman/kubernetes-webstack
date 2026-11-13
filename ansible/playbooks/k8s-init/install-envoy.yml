@@ -1,0 +1,56 @@
+---
+# Runs on the toolbox itself (the ansible control node here, not a cluster node) - it
+# already has helm/kubectl on its PATH and KUBECONFIG=/work/.kube/config set, which
+# fetch-kubeconfig.yml just populated.
+- name: Install Envoy Gateway
+  hosts: localhost
+  connection: local
+  tasks:
+    # The Gateway API CRDs come from the chart's crds subchart, not a separate kubectl
+    # apply - it ships the *experimental* channel (all 13 CRDs, TLSRoute included), which
+    # is what our l4/SNI routing needs, at the bundle version its controller was built
+    # against. Applying our own copy first made kubectl the field-manager owner of those
+    # CRDs and helm's CRD install then failed with server-side apply conflicts.
+    #
+    # Install Envoy controller as our gateway implementation
+    # Notice the --wait in this. Without it, this command will return before the webhook is ready to respond
+    # --timeout caps that wait (helm's default is 5m), and helm-values.yaml carries the
+    # tolerations the chart's own pods need to be schedulable on our tainted nodes
+    - name: Install/upgrade Envoy
+      ansible.builtin.command: >
+        helm upgrade --install envoy-gateway oci://docker.io/envoyproxy/gateway-helm
+        --version v{{ lookup('env', 'ENVOY_GATEWAY_CHART_VERSION') }}
+        --namespace {{ lookup('env', 'ENVOY_GATEWAY_NAMESPACE') }}
+        --create-namespace
+        --wait
+        --timeout 2m
+        -f /work/k8s/envoy-gateway/helm-values.yaml
+
+    # Install our envoy-proxy CRD
+    # shell/command always report changed on a clean exit, so we read kubectl's own
+    # verdict - it prints created/configured/unchanged - to tell a real edit from a re-run
+    - name: Apply envoy-proxy CRD
+      ansible.builtin.shell: kubectl apply -f -
+      args:
+        stdin: "{{ lookup( 'template', '/work/k8s/envoy-gateway/envoy-proxy-cr.yaml.j2') }}"
+      register: envoy_proxy_apply
+      changed_when: "'unchanged' not in envoy_proxy_apply.stdout"
+
+    # Install a gateway class, these are basically so simple they can just be a kubectl manifest
+    # This references the envoy-proxy CRD from above in it's template
+    - name: Apply Envoy GatewayClass
+      ansible.builtin.shell: kubectl apply -f -
+      args:
+        stdin: "{{ lookup( 'template', '/work/k8s/envoy-gateway/gatewayClass.yaml.j2') }}"
+      register: gateway_class_apply
+      changed_when: "'unchanged' not in gateway_class_apply.stdout"
+
+    # Create the LoadBalancer Service that MetalLB allocates from, and the envoy proxy
+    # pods that serve it. Nothing existons on the network until this applied
+    # This has to come after gatewayClass, which comes after envoy proxy
+    - name: Apply Gateway
+      ansible.builtin.shell: kubectl apply -f -
+      args:
+        stdin: "{{ lookup( 'template', '/work/k8s/envoy-gateway/gateway.yaml.j2') }}"
+      register: gateway_apply
+      changed_when: "'unchanged' not in gateway_apply.stdout"

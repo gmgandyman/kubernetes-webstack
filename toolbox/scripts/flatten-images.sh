@@ -7,5 +7,5 @@ set -eu
 # resource can upload it (see vm-template.tf).
 
 echo "Flattening image..."
-qemu-img convert -O qcow2 /work/packer/output/debian/packer-debian_bookworm /work/packer/output/debian/debian_bookworm.qcow2
+qemu-img convert -O qcow2 /work/packer/output/debian/packer-debian_trixie /work/packer/output/debian/debian_trixie.qcow2
 echo "Done."

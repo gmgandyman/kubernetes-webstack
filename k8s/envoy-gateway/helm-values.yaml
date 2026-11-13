@@ -1,0 +1,28 @@
+---
+# Every node in this cluster repels untolerated pods: join-nodes.yml registers
+# workers/storage with role=<node_role>:NoSchedule (app and db respectively) and the
+# control plane keeps its own node-role.kubernetes.io/control-plane taint. The chart
+# ships empty tolerations, so without these the certgen pre-install hook Job and the
+# controller Deployment sit Pending until helm's --wait gives up with
+# "Job in progress / context deadline exceeded".
+#
+# role=app puts both on a worker, the same node the envoy proxy pods land on. Those are
+# a separate concern, configured by the EnvoyProxy CR in envoy-proxy-cr.yaml.j2 - this
+# file only covers the pods the chart itself creates.
+
+# The envoy-gateway controller
+deployment:
+  pod:
+    tolerations:
+      - key: role
+        value: app
+        effect: NoSchedule
+
+# Pre-install hook that generates the webhook certs. helm blocks on this one, so it has
+# to be schedulable before anything else in the chart can proceed.
+certgen:
+  job:
+    tolerations:
+      - key: role
+        value: app
+        effect: NoSchedule
